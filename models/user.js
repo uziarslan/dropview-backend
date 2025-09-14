@@ -55,6 +55,14 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        occupation: {
+            type: String,
+            required: true,
+        },
+        purchasePriorities: {
+            type: String,
+            required: true,
+        },
 
         // Step 4: Product Preferences
         productPreferences: {
