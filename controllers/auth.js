@@ -150,9 +150,107 @@ const getUser = async (req, res) => {
     res.json(user);
 };
 
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const {
+            name,
+            email,
+            phone,
+            street,
+            city,
+            zip,
+            ageRange,
+            maritalStatus,
+            stylePreference,
+            genderIdentity,
+            familySize,
+            occupation,
+            purchasePriorities,
+            productPreferences,
+            tryFrequency
+        } = req.body;
+
+        // Check if user exists
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Check if email is being changed and if it's already taken
+        if (email && email !== user.username) {
+            const existingUser = await User.findOne({ username: email });
+            if (existingUser) {
+                return res.status(400).json({ error: "Email already in use" });
+            }
+        }
+
+        // Prepare update data
+        const updateData = {};
+
+        if (name) updateData.name = name;
+        if (email) updateData.username = email;
+        if (phone) updateData.phone = phone;
+        if (ageRange) updateData.ageRange = ageRange;
+        if (maritalStatus) updateData.maritalStatus = maritalStatus;
+        if (stylePreference) updateData.stylePreference = stylePreference;
+        if (genderIdentity) updateData.genderIdentity = genderIdentity;
+        if (familySize) updateData.familySize = familySize;
+        if (occupation) updateData.occupation = occupation;
+        if (purchasePriorities) updateData.purchasePriorities = purchasePriorities;
+        if (productPreferences && Array.isArray(productPreferences)) updateData.productPreferences = productPreferences;
+        if (tryFrequency) updateData.tryFrequency = tryFrequency;
+
+        // Update address if provided
+        if (street || city || zip) {
+            updateData.address = {
+                street: street || user.address?.street || "",
+                city: city || user.address?.city || "",
+                zip: zip || user.address?.zip || ""
+            };
+        }
+
+        // Update user
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        res.json({
+            success: "Profile updated successfully",
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error("Profile update error:", error);
+
+        // Handle validation errors from Mongoose
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                error: "Validation failed",
+                details: errors
+            });
+        }
+
+        // Handle duplicate key errors
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern)[0];
+            return res.status(400).json({
+                error: `${field} already exists`
+            });
+        }
+
+        res.status(500).json({
+            error: "Internal server error during profile update"
+        });
+    }
+};
 
 module.exports = {
     registerUser,
     userLogin,
     getUser,
+    updateProfile,
 };

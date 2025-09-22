@@ -2,6 +2,8 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 require("./models/user");
+require("./models/post");
+require("./models/comment");
 const express = require("express");
 const app = express();
 const session = require("express-session");
@@ -11,6 +13,7 @@ const bodyParser = require("body-parser");
 const ExpressError = require("./utils/ExpressError");
 const cors = require("cors");
 const authRoutes = require("./routes/auth");
+const communityRoutes = require("./routes/community");
 
 // Variables
 const PORT = process.env.PORT || 3000;
@@ -56,6 +59,7 @@ app.use(session(sessionConfig));
 
 // Routes
 app.use("/api/auth", authRoutes)
+app.use("/api/community", communityRoutes)
 
 // initializing Mongoose
 mongoose

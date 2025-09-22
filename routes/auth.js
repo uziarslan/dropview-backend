@@ -5,6 +5,7 @@ const {
     registerUser,
     userLogin,
     getUser,
+    updateProfile,
 } = require("../controllers/auth");
 const multer = require("multer");
 const { storage } = require("../cloudinary");
@@ -20,5 +21,8 @@ router.post("/user/login", wrapAsync(userLogin));
 
 // Fetching User for frontend
 router.get("/user", protect, wrapAsync(getUser));
+
+// Update user profile
+router.put("/user/profile", protect, wrapAsync(updateProfile));
 
 module.exports = router;
