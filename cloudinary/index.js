@@ -12,9 +12,9 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "ZRS CAR TRADING", // Folder name in Cloudinary
+    folder: "DropView", // Folder name in Cloudinary
     allowedFormats: ["jpeg", "png", "jpg"], // Allowed image formats
-    public_id: (req, file) => `${Date.now()}-${file.originalname}`, // Unique public ID for each file
+    public_id: (req, file) => `${file.originalname.split('.')[0]}`, // Use filename without extension as public ID
     transformation: [
       {
         quality: "auto:low",

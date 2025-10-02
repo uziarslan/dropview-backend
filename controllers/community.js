@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
+const { cloudinary } = require("../cloudinary");
 
 // Posts
 exports.createPost = async (req, res, next) => {
@@ -9,12 +10,25 @@ exports.createPost = async (req, res, next) => {
         if (!type || !content) {
             return res.status(400).json({ error: "type and content are required" });
         }
-        const post = await Post.create({
+
+        // Prepare post data
+        const postData = {
             author: req.user._id,
             type,
             title: title || undefined,
             content,
-        });
+        };
+
+        // Add image data if uploaded
+        if (req.file) {
+            postData.image = {
+                filename: req.file.originalname,
+                path: req.file.path,
+                public_id: req.file.public_id
+            };
+        }
+
+        const post = await Post.create(postData);
         res.status(201).json(post);
     } catch (err) {
         next(err);
@@ -61,6 +75,15 @@ exports.updatePost = async (req, res, next) => {
         if (title !== undefined) updateData.title = title;
         if (content !== undefined) updateData.content = content;
 
+        // Handle image update
+        if (req.file) {
+            updateData.image = {
+                filename: req.file.originalname,
+                path: req.file.path,
+                public_id: req.file.public_id
+            };
+        }
+
         const updatedPost = await Post.findByIdAndUpdate(
             id,
             updateData,
@@ -83,6 +106,17 @@ exports.deletePost = async (req, res, next) => {
         // Check if user is the author
         if (post.author.toString() !== req.user._id.toString()) {
             return res.status(403).json({ error: "Not authorized to delete this post" });
+        }
+
+        // Delete image from Cloudinary if it exists
+        if (post.image && post.image.filename) {
+            try {
+                const filename = post.image.filename;
+                const publicId = `DropView/${filename.split('.')[0]}`;
+                await cloudinary.uploader.destroy(publicId);
+            } catch (cloudinaryErr) {
+                // Continue with post deletion even if image deletion fails
+            }
         }
 
         // Delete all comments for this post
@@ -113,6 +147,42 @@ exports.togglePostLike = async (req, res, next) => {
         }
         await post.save();
         res.json({ likes: post.likes.length, liked: !hasLiked });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.deletePostImage = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const post = await Post.findById(id);
+        if (!post) return res.status(404).json({ error: "Post not found" });
+
+        // Check if user is the author
+        if (post.author.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: "Not authorized to edit this post" });
+        }
+
+        if (!post.image || !post.image.filename) {
+            return res.status(400).json({ error: "No image to delete" });
+        }
+
+        // Use the filename as public_id to delete from Cloudinary
+        const filename = post.image.filename;
+        const publicId = `DropView/${filename.split('.')[0]}`; // Include folder path and remove extension
+
+        // Delete from Cloudinary
+        try {
+            await cloudinary.uploader.destroy(publicId);
+        } catch (cloudinaryErr) {
+            // Continue with database update even if Cloudinary deletion fails
+        }
+
+        // Update database to remove image
+        post.image = undefined;
+        await post.save();
+
+        res.json({ message: "Image deleted successfully" });
     } catch (err) {
         next(err);
     }

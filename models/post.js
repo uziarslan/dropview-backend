@@ -6,6 +6,11 @@ const postSchema = new mongoose.Schema(
         type: { type: String, enum: ["question", "experience"], required: true },
         title: { type: String, trim: true },
         content: { type: String, required: true, trim: true },
+        image: {
+            filename: { type: String },
+            path: { type: String },
+            public_id: { type: String }
+        },
         likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
         commentsCount: { type: Number, default: 0 },
     },
