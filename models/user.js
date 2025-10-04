@@ -72,17 +72,53 @@ const userSchema = new mongoose.Schema(
         tryFrequency: {
             type: String,
             required: true,
+        },
+
+        // Referral System
+        referralCode: {
+            type: String,
+            unique: true,
+            sparse: true // allows null values but ensures uniqueness when present
+        },
+        referralsCount: {
+            type: Number,
+            default: 0
+        },
+        referredBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null
         }
     },
     { timestamps: true }
 );
 
 userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) {
-        return next();
+    // Hash password if modified
+    if (this.isModified("password")) {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
     }
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+
+    // Generate referral code if new user and no code exists
+    if (this.isNew && !this.referralCode) {
+        let referralCode;
+        let isUnique = false;
+
+        while (!isUnique) {
+            // Generate a random 8-character code
+            referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+
+            // Check if this code already exists
+            const existingUser = await this.constructor.findOne({ referralCode });
+            if (!existingUser) {
+                isUnique = true;
+            }
+        }
+
+        this.referralCode = referralCode;
+    }
+
     next();
 });
 

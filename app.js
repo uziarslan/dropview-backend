@@ -14,9 +14,10 @@ const ExpressError = require("./utils/ExpressError");
 const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const communityRoutes = require("./routes/community");
+const referralRoutes = require("./routes/referral");
 
 // Variables
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 const mongoURi = process.env.MONGODB_URI || "mongodb://localhost:27017/dropview";
 const secret = "thisisnotagoodsecret";
 
@@ -60,6 +61,7 @@ app.use(session(sessionConfig));
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/community", communityRoutes)
+app.use("/api/referral", referralRoutes)
 
 // initializing Mongoose
 mongoose

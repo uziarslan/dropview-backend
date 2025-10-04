@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const User = mongoose.model("User");
 const jwt = require("jsonwebtoken");
+const { incrementReferralCount } = require("./referral");
 
 const jwt_secret = process.env.JWT_SECRET;
 
@@ -27,13 +28,24 @@ const registerUser = async (req, res) => {
             occupation,
             purchasePriorities,
             productPreferences,
-            tryFrequency
+            tryFrequency,
+            referralCode
         } = req.body;
 
         // Check if user already exists
         const foundUser = await User.findOne({ username });
         if (foundUser) {
             return res.status(400).json({ error: "Email already in use. Try a different one." });
+        }
+
+        // Handle referral code if provided
+        let referrerId = null;
+        if (referralCode) {
+            const referrer = await User.findOne({ referralCode });
+            if (!referrer) {
+                return res.status(400).json({ error: "Invalid referral code" });
+            }
+            referrerId = referrer._id;
         }
 
         // Validate required fields
@@ -90,8 +102,14 @@ const registerUser = async (req, res) => {
             occupation,
             purchasePriorities,
             productPreferences,
-            tryFrequency
+            tryFrequency,
+            referredBy: referrerId
         });
+
+        // Increment referral count for the referrer if applicable
+        if (referralCode) {
+            await incrementReferralCount(referralCode);
+        }
 
         res.status(201).json({
             token: generateToken(user._id),
