@@ -10,7 +10,8 @@ const getReferralInfo = async (req, res) => {
         }
 
         // Generate the referral link
-        const referralLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/signup?ref=${user.referralCode}`;
+        const frontendUrl = process.env.FRONTEND_URL || process.env.DOMAIN_FRONTEND || 'http://localhost:3000';
+        const referralLink = `${frontendUrl}/signup?ref=${user.referralCode}`;
 
         const responseData = {
             referralCode: user.referralCode,
