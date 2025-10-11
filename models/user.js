@@ -88,6 +88,24 @@ const userSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             default: null
+        },
+
+        // Progress Tracking for First Free Drop
+        loginStreak: {
+            type: Number,
+            default: 0
+        },
+        lastLoginDate: {
+            type: Date,
+            default: null
+        },
+        communityActionsCount: {
+            type: Number,
+            default: 0
+        },
+        firstDropUnlocked: {
+            type: Boolean,
+            default: false
         }
     },
     { timestamps: true }

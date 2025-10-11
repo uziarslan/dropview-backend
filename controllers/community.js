@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
+const User = mongoose.model("User");
 const { cloudinary } = require("../cloudinary");
 
 // Posts
@@ -29,6 +30,13 @@ exports.createPost = async (req, res, next) => {
         }
 
         const post = await Post.create(postData);
+
+        // Increment community actions count for posts only (not comments)
+        await User.findByIdAndUpdate(
+            req.user._id,
+            { $inc: { communityActionsCount: 1 } }
+        );
+
         res.status(201).json(post);
     } catch (err) {
         next(err);

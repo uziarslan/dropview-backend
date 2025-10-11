@@ -155,6 +155,32 @@ const userLogin = async (req, res) => {
     if (!user) return res.status(400).json({ error: "Invalid email or password" });
 
     if (await user.matchPassword(password)) {
+        // Update login streak
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+
+        if (user.lastLoginDate) {
+            const lastLogin = new Date(user.lastLoginDate);
+            lastLogin.setHours(0, 0, 0, 0);
+
+            const daysDifference = Math.floor((today - lastLogin) / (1000 * 60 * 60 * 24));
+
+            if (daysDifference === 1) {
+                // Consecutive day login
+                user.loginStreak = (user.loginStreak || 0) + 1;
+            } else if (daysDifference > 1) {
+                // Streak broken, reset to 1
+                user.loginStreak = 1;
+            }
+            // If daysDifference === 0, same day login, don't increment
+        } else {
+            // First login ever
+            user.loginStreak = 1;
+        }
+
+        user.lastLoginDate = new Date();
+        await user.save();
+
         return res.status(201).json({ token: generateToken(user._id) });
     }
     return res.status(400).json({ error: "Invalid email or password" });
@@ -266,9 +292,69 @@ const updateProfile = async (req, res) => {
     }
 };
 
+const getProgressData = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select(
+            "referralsCount loginStreak communityActionsCount firstDropUnlocked"
+        );
+
+        if (!user) {
+            return res.status(400).json({ error: "Invalid user" });
+        }
+
+        // Cap each metric at its maximum for the formula
+        const invites = Math.min(user.referralsCount || 0, 10);
+        const logins = Math.min(user.loginStreak || 0, 5);
+        const activity = Math.min(user.communityActionsCount || 0, 3);
+
+        // Calculate progress using the formula:
+        // progress = (((invites / 10) / 3) + ((logins / 5) / 3) + ((activity / 3) / 3)) * 100
+        const progress = (
+            ((invites / 10) / 3) +
+            ((logins / 5) / 3) +
+            ((activity / 3) / 3)
+        ) * 100;
+
+        // Calculate what's needed to reach 100%
+        const invitesNeeded = Math.max(0, 10 - invites);
+        const loginsNeeded = Math.max(0, 5 - logins);
+        const activityNeeded = Math.max(0, 3 - activity);
+
+        res.json({
+            progress: Math.round(progress),
+            milestones: {
+                invites: {
+                    current: invites,
+                    target: 10,
+                    completed: invites >= 10,
+                    needed: invitesNeeded
+                },
+                loginStreak: {
+                    current: logins,
+                    target: 5,
+                    completed: logins >= 5,
+                    needed: loginsNeeded
+                },
+                communityActions: {
+                    current: activity,
+                    target: 3,
+                    completed: activity >= 3,
+                    needed: activityNeeded,
+                    description: "posts" // Only posts count, not comments
+                }
+            },
+            firstDropUnlocked: user.firstDropUnlocked || progress >= 100
+        });
+    } catch (error) {
+        console.error("Get progress data error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
 module.exports = {
     registerUser,
     userLogin,
     getUser,
     updateProfile,
+    getProgressData,
 };

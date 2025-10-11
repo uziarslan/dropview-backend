@@ -6,6 +6,7 @@ const {
     userLogin,
     getUser,
     updateProfile,
+    getProgressData,
 } = require("../controllers/auth");
 const multer = require("multer");
 const { storage } = require("../cloudinary");
@@ -24,5 +25,8 @@ router.get("/user", protect, wrapAsync(getUser));
 
 // Update user profile
 router.put("/user/profile", protect, wrapAsync(updateProfile));
+
+// Get progress data for first drop unlock
+router.get("/user/progress", protect, wrapAsync(getProgressData));
 
 module.exports = router;
